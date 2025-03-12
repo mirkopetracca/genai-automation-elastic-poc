@@ -1,0 +1,81 @@
+@import "../node_modules/bootstrap/scss/functions";
+@import "../node_modules/bootstrap/scss/variables";
+
+$primary: #460073;
+$secondary: #6c757d;
+$body-bg: #f8f9fa;
+
+$theme-colors: map-merge(
+  (
+    "primary": $primary,
+    "secondary": $secondary
+  ),
+  $theme-colors
+);
+
+@import '../node_modules/bootstrap/scss/bootstrap.scss';
+
+// Stili globali
+body {
+  font-family: Graphik, Arial, sans-serif !important;
+  background-color: $body-bg;
+}
+
+.text-primary {
+  color: $primary !important;
+}
+
+.btn-primary {
+  @include button-variant($primary, darken($primary, 7.5%), darken($primary, 10%), lighten($primary, 5%), lighten($primary, 10%), darken($primary, 30%));
+  color: rgb(236, 236, 236);
+}
+
+.btn-primary:hover {
+  background-color: ($primary, 10%);
+  color: white;
+}
+
+.btn-primary:active {
+  background-color: ($primary, 10%) !important;
+  color: white;
+}
+
+.btn-primary:disabled {
+  background-color: $secondary !important;
+  color: white;
+  border: darken($secondary, 10%);
+}
+
+.btn-outline-primary {
+  @include button-outline-variant($primary, #222222, lighten($primary, 5%), $primary);
+}
+
+.btn-outline-primary:hover {
+  color: white;
+}
+
+.btn-outline-primary:active {
+  color: white;
+}
+
+.btn-success{
+  background-color: #0b8800 !important;
+  color: white;
+}
+
+.bg-info{
+  background-color: lighten($primary, 20%) !important;
+}
+
+// Contenitore principale
+.container {
+  max-width: 1200px;
+  margin: auto;
+  padding: 20px;
+}
+
+.actions button {
+  margin-right: 10px;
+  margin-top: 5px;
+  margin-bottom: 5px;
+}

@@ -1,0 +1,40 @@
+<div class="card shadow-sm">
+
+  <div class="card-body">
+
+    <h5 class="card-title text-primary mb-3">
+      Crea un Nuovo Progetto
+    </h5>
+
+    <form (ngSubmit)="createProject()">
+      <div class="mb-3">
+        <label class="form-label">Nome Progetto</label>
+        <input type="text" class="form-control" [(ngModel)]="project.name" name="name" required />
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">URL Repository</label>
+        <input type="text" class="form-control" [(ngModel)]="project.repositoryUrl" name="repositoryUrl" required />
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Percorso Sorgenti</label>
+        <input type="text" class="form-control" [(ngModel)]="project.sourcePath" name="sourcePath" required />
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Percorso Documenti</label>
+        <input type="text" class="form-control" [(ngModel)]="project.documentsPath" name="documentsPath" required />
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Tecnologie</label>
+        <input type="text" class="form-control" [(ngModel)]="project.technologies" name="technologies" required />
+      </div>
+
+      <button type="submit" class="btn btn-success">Crea Progetto</button>
+    </form>
+
+  </div>
+
+</div>

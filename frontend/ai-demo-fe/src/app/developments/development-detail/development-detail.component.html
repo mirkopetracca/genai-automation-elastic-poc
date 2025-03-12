@@ -1,0 +1,161 @@
+<div class="container">
+
+    <a [routerLink]="['/projects', development?.project?.id]" class="btn btn-secondary mb-3">
+        ← Torna al Progetto
+    </a>
+
+    <div class="card shadow-sm p-4 position-relative">
+        <!-- Pulsante modifica in alto a destra -->
+        <button class="btn position-absolute top-0 end-0 m-2" (click)="toggleEdit()">
+            {{ isEditing ? '✖' : '✏️' }}
+        </button>
+
+        <div *ngIf="!isEditing">
+            <h2 class="text-primary">{{ development?.title }}</h2>
+            <p class="text-muted">{{ development?.description }}</p>
+        </div>
+
+        <div *ngIf="isEditing" class="edit-container">
+            <input type="text" class="form-control mb-2" [(ngModel)]="editedTitle" placeholder="Titolo">
+            <textarea class="form-control mb-2" rows="3" [(ngModel)]="editedDescription"
+                placeholder="Descrizione"></textarea>
+            <button class="btn btn-success mt-2" (click)="saveDevelopmentDetails()">💾 Salva</button>
+        </div>
+
+    </div>
+
+    <!-- Blocco Navigazione tra le Tab -->
+    <div class="actions mb-3">
+        <button class="btn btn-primary mt-3" (click)="setActiveTab('metadata')"
+            [class.active]="activeTab === 'metadata'">📄 Metadati</button>
+        <button class="btn btn-primary mt-3" (click)="setActiveTab('code')" [disabled]="!metadataAvailable"
+            [class.active]="activeTab === 'code'">💻 Codice</button>
+    </div>
+
+    <!-- Contenuto della Tab 'Metadati' -->
+    <div *ngIf="activeTab === 'metadata'">
+
+        <!-- Blocco Pulsanti Specifico per i Metadati -->
+        <div class="actions mb-3">
+            <button class="btn btn-primary mt-3" (click)="scanRelevantDocuments()" [disabled]="isScanning">
+                🔍 Cerca Documentazione
+            </button>
+            <button class="btn btn-primary mt-3" (click)="generateMetadata()">⚙ Genera Metadati</button>
+        </div>
+
+        <!-- Indicatore di caricamento -->
+        <div *ngIf="isScanning" class="alert alert-info mt-2" role="alert">
+            <div class="spinner-border text-primary me-2 d-inline-block" role="status">
+                <span class="visually-hidden">Caricamento...</span>
+            </div>
+             Scansione in corso... I documenti verranno allegati automaticamente.<br><br>
+            🔍 Sto cercando documentazione in:
+            <a *ngIf="repositoryUrl" [href]="repositoryUrl" target="_blank">
+                {{ repositoryUrl }}/{{ documentsPath }}
+            </a>
+        </div>
+
+        <br />
+        <h3>📄 Documentazione Rilevante</h3>
+        <hr />
+        <div *ngIf="chunks.length > 0; else noDocuments">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th scope="col">📄 Documento</th>
+                        <th scope="col">📌 Estratto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let doc of chunks">
+                        <td (click)="downloadDocument(doc.documentId, doc.documentName)">
+                            📥 <span class="clickable">{{ doc.documentName }}</span>
+                        </td>
+                        <td>
+                            <ul class="list-unstyled mb-0">
+                                <li *ngFor="let chunk of doc.chunkTitles">📌 {{ chunk }}</li>
+                            </ul>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Messaggio se non ci sono documenti allegati -->
+        <ng-template #noDocuments>
+            <p class="text-muted">
+                📂 Nessuna documentazione allegata a questo sviluppo.<br>
+                Puoi cercare automaticamente i documenti rilevanti tra la documentazione del progetto cliccando su 
+                <strong>"Cerca Documentazione Rilevante"</strong>.
+            </p>
+        </ng-template>
+
+        <br />
+        <br />
+
+        <h3>📝 Informazioni Estratte</h3>
+
+        <!-- Indicatore di caricamento -->
+        <div *ngIf="isExtracting" class="alert alert-info mt-2">
+            <div class="spinner-border text-primary me-2 d-inline-block" role="status">
+                <span class="visually-hidden">Caricamento...</span>
+            </div>
+             Estrazione metadati in corso... Le informazioni sullo sviluppo verranno generate automaticamente
+        </div>
+
+        <div *ngIf="!isExtracting">
+            <div *ngIf="metadataAvailable && !isExtracting; else noMetadata">
+                <ul class="list-group">
+                    <li class="list-group-item justify-content-between align-items-center">
+                        <div (click)="toggleSection('functionalRequirements')" class="collapsible-title">
+                            📂 Requisiti Funzionali <span
+                                [class]="metadataSections['functionalRequirements'] ? 'arrow down' : 'arrow right'"></span>
+                        </div>
+                        <div class="metadata-content" *ngIf="metadataSections['functionalRequirements']"
+                            [innerHTML]="metadata['functionalRequirements']">
+                        </div>
+                    </li>
+                    <li class="list-group-item justify-content-between align-items-center">
+                        <div (click)="toggleSection('useCases')" class="collapsible-title">
+                            📂 Use Cases <span
+                                [class]="metadataSections['useCases'] ? 'arrow down' : 'arrow right'"></span>
+                        </div>
+                        <div class="metadata-content" *ngIf="metadataSections['useCases']"
+                            [innerHTML]="metadata['useCases']"></div>
+                    </li>
+                    <li class="list-group-item justify-content-between align-items-center">
+                        <div (click)="toggleSection('inputOutputData')" class="collapsible-title">
+                            📂 Input/Output Data <span
+                                [class]="metadataSections['inputOutputData'] ? 'arrow down' : 'arrow right'"></span>
+                        </div>
+                        <div class="metadata-content" *ngIf="metadataSections['inputOutputData']"
+                            [innerHTML]="metadata['inputOutputData']"></div>
+                    </li>
+                    <li class="list-group-item justify-content-between align-items-center">
+                        <div (click)="toggleSection('technicalDependencies')" class="collapsible-title">
+                            📂 Dipendenze Tecniche <span
+                                [class]="metadataSections['technicalDependencies'] ? 'arrow down' : 'arrow right'"></span>
+                        </div>
+                        <div class="metadata-content" *ngIf="metadataSections['technicalDependencies']"
+                            [innerHTML]="metadata['technicalDependencies']">
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Messaggio alternativo se i metadati non sono presenti -->
+            <ng-template #noMetadata>
+                <p class="text-muted">⚠ Metadati non ancora generati.</p>
+            </ng-template>
+        </div>
+    </div>
+
+    <!-- Contenuto della Tab 'Codice' -->
+    <div *ngIf="activeTab === 'code'">
+
+        <app-development-code [developmentId]="developmentId"></app-development-code>
+
+    </div>
+
+
+</div>

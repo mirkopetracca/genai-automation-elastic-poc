@@ -1,0 +1,20 @@
+<div class="sidebar">
+  <h4>Navigator</h4>
+  <ul>
+    <li *ngFor="let project of projects" class="text-primary" (click)="selectProject(project)">
+      {{ project.expanded ? '-' : '+' }} {{ project.name }}
+      <ul *ngIf="project.expanded">
+        <div *ngIf="project.developments != null; else noDevelopments">
+          <li *ngFor="let dev of project.developments" (click)="selectDevelopment(dev, $event)">
+            {{ dev.title }}
+          </li>
+        </div>
+        <ng-template #noDevelopments>
+          <li>
+            No developments found
+          </li>
+        </ng-template>
+      </ul>
+    </li>
+  </ul>
+</div>

@@ -1,0 +1,46 @@
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #ffffff;
+  color: rgb(0, 0, 0);
+  border-bottom: 1px solid #ccc;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+}
+
+.header-logo {
+  width: 70px; /* Regola questa dimensione secondo le tue necessità */
+  height: auto;
+  margin-right: 30px; /* Spazio tra il logo e il testo */
+}
+
+.header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+button {
+  background-color: #ffffff;
+  color: rgb(0, 0, 0);
+  border: 1px solid #666666;
+  padding: 0px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+button:hover {
+  background-color: #666666;
+}
+
+$primary: #460073;
+
+.text-primary {
+  color: $primary !important;
+}
+  

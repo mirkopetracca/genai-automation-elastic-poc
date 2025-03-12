@@ -1,0 +1,11 @@
+@import '../../../styles.scss';
+
+textarea {
+    width: 100%;
+    font-family: monospace;
+    background: #f8f9fa;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    resize: vertical;
+}

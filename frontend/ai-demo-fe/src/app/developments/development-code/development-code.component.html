@@ -1,0 +1,57 @@
+<div class="actions mb-3">
+    <button class="btn btn-outline-primary mt-3" (click)="togglePromptBox()">💬 Inserisci Custom Prompt</button>
+    <button class="btn btn-primary mt-3" (click)="generateCode()">⚙ Genera Codice</button>
+    <button class="btn btn-primary mt-3" (click)="commitCode()">🚀 Commit del Codice</button>
+</div>
+
+<div *ngIf="isPromptOpen" class="prompt-box">
+    <textarea class="form-control mt-2" rows="3" [(ngModel)]="customPrompt"
+        placeholder="Inserisci una richiesta personalizzata per la generazione del codice"></textarea>
+</div>
+
+<br />
+
+<h3>💻 Codice Generato</h3>
+
+<hr />
+
+<!-- Indicatore di caricamento -->
+<div *ngIf="isGenerating" class="alert alert-info mt-2">
+    <div class="spinner-border text-primary me-2 d-inline-block" role="status">
+        <span class="visually-hidden">Caricamento...</span>
+    </div>
+     Generazione del codice in corso...
+</div>
+
+<!-- Indicatore di caricamento -->
+<div *ngIf="isCommitting" class="alert alert-info mt-2">
+    <div class="spinner-border text-primary me-2 d-inline-block" role="status">
+        <span class="visually-hidden">Caricamento...</span>
+    </div>
+    Commit del codice in corso...
+</div>
+
+<div *ngIf="!isGenerating">
+    <div *ngIf="generatedFiles.length > 0; else noCode">
+        <ul class="list-group">
+            <li *ngFor="let file of generatedFiles" class="list-group-item">
+                <strong>{{ file.fileName }}</strong>
+
+                <!-- Textarea per modificare il codice -->
+                <textarea class="form-control mt-2" rows="8" [(ngModel)]="file.fileContent"
+                    (ngModelChange)="updateFileContent(file.id, file.fileName, $event)">
+            </textarea>
+
+                <!-- Pulsante di salvataggio -->
+                <button class="btn btn-primary mt-2" (click)="saveFile(file.id)" [disabled]="!editedFiles[file.id]">
+                    💾 Salva
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Messaggio se il codice non è ancora stato generato -->
+    <ng-template #noCode>
+        <p class="text-muted">⚠ Nessun codice generato.</p>
+    </ng-template>
+</div>

@@ -1,0 +1,71 @@
+@import '../../../styles.scss';
+
+.collapsible-title {
+    font-size: 1.15em;
+    cursor: pointer;
+    color: $primary;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: color 0.2s ease-in-out;
+}
+
+.collapsible-title:hover {
+    color: $primary;
+}
+
+.arrow {
+    display: inline-block;
+    transition: transform 0.2s ease-in-out;
+}
+
+.arrow.right {
+    transform: rotate(0deg);
+}
+
+.arrow.down {
+    transform: rotate(90deg);
+}
+
+.edit-container {
+    max-width: 90%; // Imposta una larghezza massima per i campi
+}
+
+.clickable {
+    font-size: 1.15em;
+    cursor: pointer;
+    color: $primary;
+}
+
+.clickable:hover {
+    color: $primary;
+}
+
+.metadata-content {
+    margin: 10px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th {
+    background-color: #f8f9fa;
+    text-align: left;
+    padding: 8px;
+}
+
+td {
+    padding: 8px;
+}
+
+td.clickable {
+    cursor: pointer;
+    color: #007bff;
+    text-decoration: underline;
+}
+
+td.clickable:hover {
+    color: #0056b3;
+}

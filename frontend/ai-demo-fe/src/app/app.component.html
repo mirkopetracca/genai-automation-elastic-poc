@@ -1,0 +1,12 @@
+<app-header></app-header>
+<div class="layout">
+  <app-sidebar-navigator [projects]="projects" (projectSelected)="onProjectSelected($event)"
+    (developmentSelected)="onDevelopmentSelected($event)">
+  </app-sidebar-navigator>
+
+  <div class="content">
+    <main [@routeAnimations]="prepareRoute(outlet)">
+      <router-outlet #outlet="outlet"></router-outlet>
+    </main>
+  </div>
+</div>

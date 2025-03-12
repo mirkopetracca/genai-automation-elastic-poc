@@ -1,0 +1,16 @@
+<ul class="list-group">
+  <div *ngIf="developments.length > 0; else noDevelopments">
+    <li *ngFor="let development of developments" class="list-group-item">
+      <a [routerLink]="'/developments/' + development.id" class="text-primary clickable">
+        📝 {{ development.title }}
+      </a>
+    </li>
+  </div>
+</ul>
+
+<!-- Messaggio se non ci sono documenti allegati -->
+<ng-template #noDevelopments>
+  <p class="text-muted">
+    ⚠ Ancora nessuno sviluppo creato per questo progetto
+  </p>
+</ng-template>

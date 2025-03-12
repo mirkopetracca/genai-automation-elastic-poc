@@ -1,0 +1,7 @@
+<div class="card p-3 mb-3">
+    <h5 class="text-primary">Carica un Documento</h5>
+    <input type="file" class="form-control mb-2" (change)="onFileSelected($event)" />
+    <button class="btn btn-success" (click)="upload()" [disabled]="!selectedFile">Carica</button>
+    <p *ngIf="uploadMessage" class="mt-2">{{ uploadMessage }}</p>
+  </div>
+  

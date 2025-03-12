@@ -1,0 +1,13 @@
+@import '../../../styles.scss';
+
+.clickable {
+    font-size: 1.15em;
+    cursor: pointer;
+    color: $primary !important;
+    text-decoration: none !important;
+}
+
+.clickable:hover {
+    color: $primary !important;
+    text-decoration: none !important;
+}

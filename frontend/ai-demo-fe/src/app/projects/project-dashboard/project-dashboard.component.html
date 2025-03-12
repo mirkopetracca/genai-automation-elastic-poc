@@ -1,0 +1,24 @@
+<div class="container">
+    <h1 class="mb-4 text-primary">Progetti</h1>
+  
+    <button class="btn btn-primary mb-3" (click)="toggleForm()">
+      {{ showForm ? '✖ Chiudi' : '+ Crea Nuovo Progetto' }}
+    </button>
+  
+    <app-project-form *ngIf="showForm"></app-project-form>
+  
+    <div *ngIf="!showForm" class="row">
+      <div class="col-md-6 mb-3" *ngFor="let project of projects">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title">
+              <a [routerLink]="['/projects', project.id]" class="text-primary text-decoration-none">{{ project.name }}</a>
+            </h5>
+            <p class="card-text text-muted">{{ project.repositoryUrl }}</p>
+            <span class="badge bg-info">{{ project.technologies }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
