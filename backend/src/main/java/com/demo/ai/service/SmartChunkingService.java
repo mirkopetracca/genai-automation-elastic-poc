@@ -144,20 +144,45 @@ public class SmartChunkingService {
 		List<Float> queryEmbedding = aiService.generateEmbedding(devDescription);
 
 		// Multi-Hop Retrieval: BM25 + Vector Search
-		List<DocumentChunkEntity> retrievedChunks = hybridRetrieverService.retrieveRelevantChunks(devDescription, queryEmbedding);
+		//List<DocumentChunkEntity> retrievedChunks = hybridRetrieverService.retrieveRelevantChunks(devDescription, queryEmbedding);
 
-		// Convert chunks to text format
-		List<String> chunkTexts = retrievedChunks.stream()
-				.map(DocumentChunkEntity::getChunkText)
-				.collect(Collectors.toList());
+		List<DocumentChunkEntity> retrievedChunks = documentChunkRepository.searchHybrid(EmbeddingUtils.convertFloatListToArray(queryEmbedding), devDescription);
+
+
+		StringBuilder chunksText = new StringBuilder();
+
+		for (DocumentChunkEntity chunk : retrievedChunks) {
+
+			chunksText.append("**Id:** ").append(chunk.getId()).append("\n");
+			chunksText.append("**Titolo:** ").append(chunk.getTitle()).append("\n");
+			chunksText.append(chunk.getChunkText()).append("\n\n---\n\n");
+
+		}
+
+		String prompt = "La query dell'utente è: \"" + devDescription + "\"\n\n"
+				+ "Di seguito ci sono alcuni estratti di documenti. Per ogni estratto, indica se è rilevante indicando soltanto \"ID,(SI/NO)\" senza aggiungere altro:\n\n"
+				+ chunksText;
+
+
 
 		// LLM-Based Reasoning (ReAG)
-		List<String> filteredChunkTexts = claudeAIService.filterChunksWithReAG(chunkTexts, devDescription);
+		List<String> filteredChunkTexts = claudeAIService.filterChunksWithReAG(chunksText.toString(), prompt);
+		List<Long> relevantIds = new ArrayList<>();
+		System.out.println("##### filteredChunkTexts: "+filteredChunkTexts);
+		for (String line : filteredChunkTexts.get(0).split("\n")) {
+			String[] parts = line.split(",");
+			System.out.println("##### parts: "+parts);
+			if (parts.length == 2 && parts[1].trim().equalsIgnoreCase("SI")) {
+				try {
+					relevantIds.add(Long.parseLong(parts[0].trim())); // 🔹 Estraiamo l'ID
+				} catch (NumberFormatException e) {
+					System.err.println("Errore nel parsing dell'ID: " + line);
+				}
+			}
+		}
+		System.out.println("##### relevantIds: "+relevantIds);
 
-		// Map back to entities
-		List<DocumentChunkEntity> filteredChunks = retrievedChunks.stream()
-				.filter(chunk -> filteredChunkTexts.contains(chunk.getChunkText()))
-				.collect(Collectors.toList());
+		List<DocumentChunkEntity> filteredChunks = retrievedChunks.stream().filter(chunk -> relevantIds.contains(chunk.getId())).collect(Collectors.toList());
 
 		// Associate relevant chunks
 		associateChunksToDevelopment(development, filteredChunks);
