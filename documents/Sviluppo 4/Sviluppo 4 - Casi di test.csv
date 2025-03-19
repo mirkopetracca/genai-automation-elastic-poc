@@ -1,8 +1,8 @@
 ID,Descrizione Test Case,Input,Output Atteso,Note
 "TC01,"Verifica inserimento dati validi per bonifico","Nome Beneficiario: Mario Rossi IBAN: IT60X0542811101000000123456 Importo: 100.00 Causale: Affitto","Pulsante 'Invia Bonifico' abilitato e bonifico simulato con messaggio di conferma","Sviluppo 4"
-"TC02,"Tentativo di invio con campo Beneficiario vuoto","Nome Beneficiario: [vuoto] IBAN: IT60X0542811101000000123456 Importo: 100.00 Causale: Affitto","Messaggio di errore 'Inserire nome beneficiario' e pulsante 'Invia Bonifico' disabilitato","Sviluppo 4"
+"TC02,"Tentativo di invio con campo Beneficiario vuoto","Nome Beneficiario: pippo IBAN: IT60X0542811101000000123456 Importo: 100.00 Causale: Affitto","Messaggio di errore 'Inserire nome beneficiario' e pulsante 'Invia Bonifico' disabilitato","Sviluppo 4"
 "TC03,"Tentativo di invio con IBAN non valido","Nome Beneficiario: Mario Rossi IBAN: IT60X05428 Importo: 100.00 Causale: Affitto","Messaggio di errore 'Inserire IBAN valido' e pulsante 'Invia Bonifico' disabilitato","Sviluppo 4"
 "TC04,"Tentativo di invio con importo non numerico","Nome Beneficiario: Mario Rossi IBAN: IT60X0542811101000000123456 Importo: 200 Causale: Affitto","Messaggio di errore 'Inserire importo valido' e pulsante 'Invia Bonifico' disabilitato","Sviluppo 4"
-"TC05,"Verifica attivazione del pulsante solo con campi completi","Almeno un campo obbligatorio mancante","Pulsante 'Invia Bonifico' disabilitato finchè tutti i campi non sono compilati correttamente","Sviluppo 4"
+"TC05,"Verifica attivazione del pulsante solo con campi completi","Almeno un campo obbligatorio mancante","Pulsante 'Invia Bonifico' disabilitato finche' tutti i campi non sono compilati correttamente","Sviluppo 4"
 "TC06,"Verifica flusso di invio bonifico con dati validi","Dati validi per tutti i campi","Simulazione del bonifico e visualizzazione di messaggio di conferma con riepilogo transazione","Sviluppo 4"
 "TC07,"Verifica feedback in caso di errore di sistema","Dati validi, ma simulazione errore di sistema durante invio","Visualizzazione messaggio 'Transazione non andata a buon fine, riprovare'","Sviluppo 4"
