@@ -1,0 +1,191 @@
+from fastapi import FastAPI, HTTPException
+
+from llama_index.core import (
+    VectorStoreIndex, Settings, StorageContext, Document
+)
+#from llama_index.llms.openai import OpenAI Removed OpenAI call
+from llama_index.embeddings.openai import OpenAIEmbedding
+from llama_index.vector_stores.faiss import FaissVectorStore
+from llama_index.core.indices.keyword_table import KeywordTableIndex
+from llama_index.core.indices.composability import ComposableGraph
+from llama_index.core.postprocessor import SimilarityPostprocessor
+from pydantic import BaseModel
+import uvicorn
+import faiss
+
+
+import os
+import requests
+from github import Github  # PyGithub for private repos
+from llama_index.core import Document
+from pdfminer.high_level import extract_text as extract_pdf_text
+from docx import Document as DocxDocument
+import pandas as pd
+from tika import parser
+import io
+
+
+# ✅ GitHub Config
+GITHUB_TOKEN = ""  # 🔹 Required for private repos
+GITHUB_REPO = ""
+GITHUB_BRANCH = "main"
+RAW_GITHUB_URL = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{GITHUB_BRANCH}/"
+
+# ✅ Function to extract text from different file formats
+def extract_text_from_file(file_url, file_extension):
+    response = requests.get(file_url)
+    response.raise_for_status()
+    content = response.content
+
+    if file_extension in ["txt", "md"]:
+        return content.decode("utf-8", errors="ignore")  # ✅ Plain text
+
+    elif file_extension in ["doc", "docx"]:
+        doc = DocxDocument(io.BytesIO(content))  # ✅ Read .docx
+        return "\n".join([para.text for para in doc.paragraphs])
+
+    elif file_extension in ["xls", "xlsx", "csv"]:
+        df = pd.read_excel(io.BytesIO(content)) if "xls" in file_extension else pd.read_csv(io.BytesIO(content))  # ✅ Read Excel/CSV
+        return df.to_string()
+
+    elif file_extension == "pdf":
+        with open("temp.pdf", "wb") as temp_file:
+            temp_file.write(content)  # ✅ Save temporarily
+        text = extract_pdf_text("temp.pdf")
+        os.remove("temp.pdf")
+        return text
+
+    elif file_extension in ["ppt", "pptx", "uml"]:
+        parsed = parser.from_buffer(content)  # ✅ Read PPT/UML
+        return parsed["content"] if parsed else ""
+
+    else:
+        return None  # ❌ Unsupported file
+
+# ✅ Load Documents from GitHub
+def load_documents_from_github():
+    documents = []
+    g = Github(GITHUB_TOKEN)
+    repo = g.get_repo(GITHUB_REPO)
+
+    # 🔹 Get a list of all files in the repo
+    contents = repo.get_contents("documents")
+    
+    while contents:
+        file_content = contents.pop(0)
+        print(file_content)
+
+        if file_content.type == "dir":
+            contents.extend(repo.get_contents(file_content.path))  # ✅ Recursively get subfolders
+        else:
+            file_url = RAW_GITHUB_URL + file_content.path
+            file_extension = file_content.path.split(".")[-1].lower()
+
+            text = extract_text_from_file(file_url, file_extension)
+            if text:
+                documents.append(Document(text=text, metadata={"file_name": file_content.name}))
+
+    return documents
+
+
+# ✅ Load from GitHub Instead of Local
+documents = load_documents_from_github()
+
+# ✅ Use ONLY OpenAI Embeddings (No LLM Calls)
+OPENAI_API_KEY = ""
+Settings.llm = None #No LLM #llm = OpenAI(model="gpt-4", temperature=0.0, api_key=OPENAI_API_KEY) 
+Settings.embed_model = OpenAIEmbedding(model="text-embedding-3-small", api_key=OPENAI_API_KEY)
+
+# ✅ Fix: Ensure the context window is correctly set
+Settings.context_window = 3900  # Ensures enough space for retrieval
+Settings.num_output = 512  # Limits LlamaIndex's response generation
+#Settings.node_parser = None # Prevents automatic chunk expansion
+
+# FAISS Index Storage
+d = 1536  # Embedding dimension
+faiss_index = faiss.IndexFlatL2(d)
+vector_store = FaissVectorStore(faiss_index=faiss_index)
+storage_context = StorageContext.from_defaults(vector_store=vector_store)
+
+# ✅ Ensure FAISS gets populated
+vector_index = VectorStoreIndex.from_documents(documents, storage_context=storage_context)
+
+# ✅ Create BM25 Index (No LLM Calls)
+keyword_index = KeywordTableIndex.from_documents(documents, llm=None)
+
+# ✅ Create Retrievers for BM25 and FAISS
+bm25_retriever = keyword_index.as_retriever(similarity_top_k=5)  # ✅ BM25 Retriever
+faiss_retriever = vector_index.as_retriever(similarity_top_k=5)  # ✅ FAISS Retriever
+
+# ✅ Hybrid Retrieval Function
+def hybrid_retrieve(query):
+    bm25_results = bm25_retriever.retrieve(query)  # 🔹 Get BM25 results
+    faiss_results = faiss_retriever.retrieve(query)  # 🔹 Get FAISS results
+
+    # 🔹 Combine & Re-Rank
+    combined_results = bm25_results + faiss_results
+    
+        # 🔹 Ensure scores are valid (Replace None with 0)
+    for result in combined_results:
+        if result.score is None:
+            result.score = 0.0  # ✅ Replace None with 0
+      
+    #Filter out results with score == 0.0
+    filtered_results = [r for r in combined_results if r.score > 0.0]
+    ranked_results = sorted(filtered_results, key=lambda x: x.score, reverse=True)
+
+    return ranked_results
+
+
+# ✅ FastAPI API Setup
+app = FastAPI()
+
+class QueryRequest(BaseModel):
+    query: str
+
+@app.post("/query")
+async def query_llama(request: QueryRequest):
+    try:
+        # Query LlamaIndex
+        retriever = vector_index.as_retriever(similarity_top_k=10)
+        response = retriever.retrieve(request.query)
+
+        # Convert response to JSON
+        results = [{"id": i, "filename": r.metadata.get("file_name", "Unknown"), "text": r.text} for i, r in enumerate(response)]
+        return {"query": request.query, "results": results}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/queryHybrid")
+async def query_llama(request: QueryRequest):
+    try:
+        response = hybrid_retrieve(request.query)  # ✅ Manually combine BM25 & FAISS
+
+        # ✅ Fix: Iterate over response directly (No `.source_nodes`)
+        results = [
+            {"id": i, "filename": r.metadata.get("file_name", "Unknown").rpartition("\\")[2], "text": r.text, "score": r.score}
+            for i, r in enumerate(response)
+        ]
+        return {"query": request.query, "results": results}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/refresh")
+async def refreshIndex_llama():
+    try:
+        print("Refreshing Vector Index...")
+        #index.refresh_ref_docs(documents)
+        print(index.ref_doc_info)
+        print("Vector Index Refreshed.")
+        return {"ok"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8001)
