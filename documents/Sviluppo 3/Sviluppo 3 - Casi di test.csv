@@ -1,0 +1,8 @@
+ID,Descrizione Test Case,Input,Output Atteso,Note
+TC01,"Verifica visualizzazione dettagli conto","Accesso alla pagina con ID conto specifico","Visualizzazione del saldo corrente e dati anagrafici del conto","Sviluppo 3"
+TC02,"Verifica caricamento storico transazioni","Accesso alla pagina","Elenco delle transazioni visualizzato in ordine cronologico","Sviluppo 3"
+TC03,"Verifica filtro transazioni per data","Selezione filtro data (es. ultimo mese)","Lista transazioni aggiornata in base al filtro applicato","Sviluppo 3"
+TC04,"Verifica interazione su singola transazione","Clic su una transazione specifica","Apertura di un modal o pagina con dettagli aggiuntivi della transazione","Sviluppo 3"
+TC05,"Verifica esportazione estratto conto","Clic sul pulsante 'Esporta'","Generazione e download del file PDF dell'estratto conto","Sviluppo 3"
+TC06,"Verifica adattabilità layout su mobile","Accesso alla pagina da dispositivo mobile","Layout responsive con visualizzazione ottimale dei dettagli e lista transazioni","Sviluppo 3"
+TC07,"Verifica messaggi di errore in caso di dati non disponibili","Simulazione errore nel recupero dati","Visualizzazione di messaggio 'Dati non disponibili' o indicazioni di errore","Sviluppo 3"

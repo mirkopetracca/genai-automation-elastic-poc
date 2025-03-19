@@ -1,0 +1,8 @@
+ID,Descrizione Test Case,Input,Output Atteso,Note
+TC01,"Verifica visualizzazione header con logo e menu","Accesso alla Home Page","Header visualizzato con logo 'Parthenope Banking' e menu di navigazione completo","Sviluppo 2"
+TC02,"Verifica navigazione tramite menu","Clic su voce 'Conti' dal menu","Redirezionamento alla pagina dei conti con evidenziazione della voce attiva","Sviluppo 2"
+TC03,"Verifica visualizzazione riepilogo saldo","Accesso alla Home Page","Visualizzazione del saldo riepilogativo e widget informativi aggiornati","Sviluppo 2"
+TC04,"Verifica interazione widget informativo","Clic sul widget saldo","Redirezionamento alla pagina dettagli conto","Sviluppo 2"
+TC05,"Verifica adattabilità del layout su mobile","Accesso alla Home Page da dispositivo mobile","Layout responsive con menu hamburger e contenuto ottimizzato per mobile","Sviluppo 2"
+TC06,"Verifica visualizzazione notifiche","Accesso alla Home Page con notifiche attive","Elenco notifiche visualizzato in area dedicata, con opzioni di interazione","Sviluppo 2"
+TC07,"Verifica transizioni e animazioni","Interazione con menu/widget","Animazioni fluide al passaggio del mouse e durante i cambi di sezione","Sviluppo 2"
