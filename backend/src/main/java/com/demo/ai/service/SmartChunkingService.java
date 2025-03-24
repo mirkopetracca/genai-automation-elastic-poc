@@ -63,6 +63,16 @@ public class SmartChunkingService {
 
 	public void createChunks() {
 		//invocare lamaindex per effettuare l'embedding dei documenti
+
+		List<ProjectEntity> projects = projectService.getAllProjects();
+		for (ProjectEntity project : projects) {
+
+			String documentsPath = project.getDocumentsPath();
+			String repoUrl = project.getRepositoryUrl();
+
+			String repoName = repoUrl.replace("https://github.com/", "");
+			llamaIndexService.loadDocuments(repoName, documentsPath);
+		}
 	}
 
 	public String searchRelevantChunksForDevelopmentId(Long developmentId) {

@@ -18,11 +18,32 @@ public class LlamaIndexService {
     private static final Log log = LogFactory.getLog(LlamaIndexService.class);
 
     private final DocumentRepository documentRepository;
-    @Value("${llamaIndex.url}")
-    private String llamaIndexUrl;
+    @Value("${llamaIndex.documents.url}")
+    private String llamaIndexDocumentsUrl;
+
+    @Value("${llamaIndex.search.url}")
+    private String llamaIndexSearchUrl;
+
 
     public LlamaIndexService(DocumentRepository documentRepository) {
         this.documentRepository = documentRepository;
+    }
+
+    public void loadDocuments(String githubRepo, String folder) {
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("githubRepo", githubRepo);
+        requestBody.put("folder", folder);
+
+        log.info(("\n\nPROMPT:\n" + requestBody));
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+        ResponseEntity<Map> responseEntity = restTemplate.exchange(llamaIndexDocumentsUrl, HttpMethod.POST, request, Map.class);
+
+        log.info(("\n\nresponse:\n" + responseEntity));
     }
 
     public List<DocumentChunkDTO> filterDocumentsWithReAG(String query) {
@@ -36,7 +57,7 @@ public class LlamaIndexService {
         log.info(("\n\nPROMPT:\n" + query));
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
-        ResponseEntity<Map> responseEntity = restTemplate.exchange(llamaIndexUrl, HttpMethod.POST, request, Map.class);
+        ResponseEntity<Map> responseEntity = restTemplate.exchange(llamaIndexSearchUrl, HttpMethod.POST, request, Map.class);
 
         List<Map<String, String>> results = (List<Map<String, String>>) responseEntity.getBody().get("results");
         List<DocumentChunkDTO> documents = new ArrayList<>();
