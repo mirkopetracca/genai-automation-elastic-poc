@@ -6,11 +6,9 @@ from llama_index.core import (
 #from llama_index.llms.openai import OpenAI Removed OpenAI call
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.vector_stores.faiss import FaissVectorStore
-from llama_index.vector_stores.postgres import PGVectorStore
 from llama_index.core.indices.keyword_table import KeywordTableIndex
 from llama_index.core.indices.composability import ComposableGraph
 from llama_index.core.postprocessor import SimilarityPostprocessor
-from pgvector_service import PGVectorService  # Import our Postgres service
 from pydantic import BaseModel
 import uvicorn
 import faiss
@@ -26,14 +24,12 @@ import pandas as pd
 from tika import parser
 import io
 
+
 # ✅ GitHub Config
 GITHUB_TOKEN = ""  # 🔹 Required for private repos
-#GITHUB_REPO = "mirkopetracca/genai-automation-elastic-poc"
+GITHUB_REPO = "mirkopetracca/genai-automation-elastic-poc"
 GITHUB_BRANCH = "main"
-#RAW_GITHUB_URL = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{GITHUB_BRANCH}/"
-
-# ✅ OpenAI Config
-OPENAI_API_KEY = ""
+RAW_GITHUB_URL = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{GITHUB_BRANCH}/"
 
 # ✅ Function to extract text from different file formats
 def extract_text_from_file(file_url, file_extension):
@@ -67,95 +63,82 @@ def extract_text_from_file(file_url, file_extension):
         return None  # ❌ Unsupported file
 
 # ✅ Load Documents from GitHub
-#def load_documents_from_github():
-#    return load_documents_from_github_repo(GITHUB_REPO)
-    
-# ✅ Load Documents from GitHub
-def load_documents_from_github_repo(github_repo, folder):
+def load_documents_from_github():
     documents = []
     g = Github(GITHUB_TOKEN)
-    githubUrl = f"https://raw.githubusercontent.com/{github_repo}/{GITHUB_BRANCH}/"
-    repo = g.get_repo(github_repo)
+    repo = g.get_repo(GITHUB_REPO)
 
     # 🔹 Get a list of all files in the repo
-    contents = repo.get_contents(folder)
+    contents = repo.get_contents("documents")
     
     while contents:
         file_content = contents.pop(0)
+        print(file_content)
 
         if file_content.type == "dir":
             contents.extend(repo.get_contents(file_content.path))  # ✅ Recursively get subfolders
         else:
-            file_url = githubUrl + file_content.path
+            file_url = RAW_GITHUB_URL + file_content.path
             file_extension = file_content.path.split(".")[-1].lower()
 
             text = extract_text_from_file(file_url, file_extension)
             if text:
                 documents.append(Document(text=text, metadata={"file_name": file_content.name}))
 
-    return get_vector_index(documents)
+    return documents
 
-# ✅ Load or create Documents from Postgres and create vector index
-def get_vector_index(documents):
-    # ✅ Postgres Vector Store Connection
-    pg_vector_service = PGVectorService()
 
-    # ✅ Check Existing Embeddings
-    existing_embeddings = pg_vector_service.get_existing_embeddings()
+# ✅ Load from GitHub Instead of Local
+documents = load_documents_from_github()
 
-    # ✅ Separate New Documents (Batch Processing)
-    new_file_names = []
-    new_texts = []
-    document_embeddings = {}
+# ✅ Use ONLY OpenAI Embeddings (No LLM Calls)
+OPENAI_API_KEY = ""
+Settings.llm = None #No LLM #llm = OpenAI(model="gpt-4", temperature=0.0, api_key=OPENAI_API_KEY) 
+Settings.embed_model = OpenAIEmbedding(model="text-embedding-3-small", api_key=OPENAI_API_KEY)
+
+# ✅ Fix: Ensure the context window is correctly set
+Settings.context_window = 3900  # Ensures enough space for retrieval
+Settings.num_output = 512  # Limits LlamaIndex's response generation
+#Settings.node_parser = None # Prevents automatic chunk expansion
+
+# FAISS Index Storage
+d = 1536  # Embedding dimension
+faiss_index = faiss.IndexFlatL2(d)
+vector_store = FaissVectorStore(faiss_index=faiss_index)
+storage_context = StorageContext.from_defaults(vector_store=vector_store)
+
+# ✅ Ensure FAISS gets populated
+vector_index = VectorStoreIndex.from_documents(documents, storage_context=storage_context)
+
+# ✅ Create BM25 Index (No LLM Calls)
+keyword_index = KeywordTableIndex.from_documents(documents, llm=None)
+
+# ✅ Create Retrievers for BM25 and FAISS
+bm25_retriever = keyword_index.as_retriever(similarity_top_k=5)  # ✅ BM25 Retriever
+faiss_retriever = vector_index.as_retriever(similarity_top_k=5)  # ✅ FAISS Retriever
+
+# ✅ Hybrid Retrieval Function
+def hybrid_retrieve(query):
+    bm25_results = bm25_retriever.retrieve(query)  # 🔹 Get BM25 results
+    faiss_results = faiss_retriever.retrieve(query)  # 🔹 Get FAISS results
+
+    # 🔹 Combine & Re-Rank
+    combined_results = bm25_results + faiss_results
     
-    for doc in documents:
-        file_name = doc.metadata["file_name"]
+        # 🔹 Ensure scores are valid (Replace None with 0)
+    for result in combined_results:
+        if result.score is None:
+            result.score = 0.0  # ✅ Replace None with 0
+      
+    #Filter out results with score == 0.0
+    filtered_results = [r for r in combined_results if r.score > 0.0]
+    ranked_results = sorted(filtered_results, key=lambda x: x.score, reverse=True)
 
-        # ✅ If embedding exists in DB, use it
-        if file_name in existing_embeddings:
-            document_embeddings[file_name] = existing_embeddings[file_name]
-        else:
-            new_file_names.append(file_name)
-            new_texts.append(doc.text)
-
-    # ✅ Batch Process Only New Documents
-    if new_texts:
-        print(f"🔹 Generating embeddings for {len(new_texts)} new documents...")
-        
-        # ✅ Call OpenAI ONCE with all texts
-        new_embeddings = Settings.embed_model._get_text_embeddings(new_texts)
-
-        # ✅ Store all embeddings in Postgres in a single transaction
-        pg_vector_service.store_embeddings_batch(new_file_names, new_embeddings)
-
-        # ✅ Add them to our local index
-        for i in range(len(new_file_names)):
-            document_embeddings[new_file_names[i]] = new_embeddings[i]
-    
-    # ✅ Close DB Connection
-    pg_vector_service.close()
-    
-    # ✅ Initialize Postgres Vector Store
-    vector_store = pg_vector_service.get_vector_store()
-    storage_context = StorageContext.from_defaults(vector_store=vector_store)
-
-    global vector_index
-    # ✅ Index with Existing or Newly Generated Embeddings
-    vector_index = VectorStoreIndex.from_vector_store(storage_context.vector_store)
-
-    return new_file_names
+    return ranked_results
 
 
 # ✅ FastAPI API Setup
 app = FastAPI()
-
-# ✅ Use ONLY OpenAI Embeddings (No LLM Calls)
-Settings.llm = None #No LLM #llm = OpenAI(model="gpt-4", temperature=0.0, api_key=OPENAI_API_KEY) 
-Settings.embed_model = OpenAIEmbedding(model="text-embedding-3-small", api_key=OPENAI_API_KEY)
-
-# ✅ Index with Existing or Newly Generated Embeddings
-vector_index = None
-get_vector_index([])
 
 class QueryRequest(BaseModel):
     query: str
@@ -163,9 +146,22 @@ class QueryRequest(BaseModel):
 @app.post("/query")
 async def query_llama(request: QueryRequest):
     try:
-        # ✅ Create Retriever
+        # Query LlamaIndex
         retriever = vector_index.as_retriever(similarity_top_k=10)
         response = retriever.retrieve(request.query)
+
+        # Convert response to JSON
+        results = [{"id": i, "filename": r.metadata.get("file_name", "Unknown"), "text": r.text} for i, r in enumerate(response)]
+        return {"query": request.query, "results": results}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/queryHybrid")
+async def query_llama(request: QueryRequest):
+    try:
+        response = hybrid_retrieve(request.query)  # ✅ Manually combine BM25 & FAISS
 
         # ✅ Fix: Iterate over response directly (No `.source_nodes`)
         results = [
@@ -178,20 +174,14 @@ async def query_llama(request: QueryRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-class DocumentsRequest(BaseModel):
-    githubRepo: str
-    folder: str
-    
-@app.post("/documents")
-async def query_llama(request: DocumentsRequest):
+@app.get("/refresh")
+async def refreshIndex_llama():
     try:
-        response = load_documents_from_github_repo(request.githubRepo, request.folder)
-        message = "{} file/s added".format(len(response))
-        results = [
-            {"id": i, "filename": r}
-            for i, r in enumerate(response)
-        ]
-        return {"githubRepo": request.githubRepo, "message": message, "results": results}
+        print("Refreshing Vector Index...")
+        #index.refresh_ref_docs(documents)
+        print(index.ref_doc_info)
+        print("Vector Index Refreshed.")
+        return {"ok"}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
